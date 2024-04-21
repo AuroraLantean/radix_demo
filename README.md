@@ -1,5 +1,8 @@
 # Radix Demo
 
+Format code: `cargo fmt`
+Lint and auto fix: `cargo clippy --fix --allow-dirty`
+
 1. Create a new account, and save the account component address
 
 ```
