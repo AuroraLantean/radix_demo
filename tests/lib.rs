@@ -1,4 +1,4 @@
-use hello::test_bindings::*;
+use dragon_coin::test_bindings::*;
 use radix_engine_interface::prelude::*;
 use scrypto::this_package;
 use scrypto_test::prelude::*;
@@ -7,7 +7,7 @@ use scrypto_unit::*;
 use transaction::builder::ManifestBuilder;
 
 #[test]
-fn test_hello() {
+fn test() {
   // Setup the environment
   let mut test_runner = TestRunnerBuilder::new().build();
 
@@ -17,12 +17,12 @@ fn test_hello() {
   // Publish package
   let package_address = test_runner.compile_and_publish(this_package!());
 
-  // Test the `instantiate_hello` function.
+  // Test the `instantiate` function.
   let manifest = ManifestBuilder::new()
     .call_function(
       package_address,
-      "Hello",
-      "instantiate_hello",
+      "dragog_coin",
+      "instantiate",
       manifest_args!(),
     )
     .build();
@@ -51,15 +51,16 @@ fn test_hello() {
 }
 
 #[test]
-fn test_hello_with_test_environment() -> Result<(), RuntimeError> {
+fn test_with_test_environment() -> Result<(), RuntimeError> {
   // Arrange
   let mut env = TestEnvironment::new();
   let package_address = Package::compile_and_publish(this_package!(), &mut env)?;
 
-  let mut hello = Hello::instantiate_hello(package_address, &mut env)?;
+  let mut dragog_coin = DragonCoin::instantiate(package_address, &mut env)?;
 
   // Act
-  let bucket = hello.free_token(&mut env)?;
+  let amount = dec!(3);
+  let bucket = dragog_coin.get_token(amount, &mut env)?;
 
   // Assert
   let amount = bucket.amount(&mut env)?;

@@ -1,6 +1,7 @@
 # Radix Demo
 
 Format code: `cargo fmt`
+
 Lint and auto fix: `cargo clippy --fix --allow-dirty`
 
 1. Create a new account, and save the account component address
@@ -15,10 +16,10 @@ resim new-account
 resim publish .
 ```
 
-3. Call the `instantiate_hello` function to instantiate a component, and save the component address
+3. Call the `instantiate` function to instantiate a component, and save the component address
 
 ```
-resim call-function <PACKAGE_ADDRESS> Hello instantiate_hello
+resim call-function <PACKAGE_ADDRESS> DragonCoin instantiate
 ```
 
 4. Call the `free_token` method of the component we just instantiated

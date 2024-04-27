@@ -1,5 +1,5 @@
 [package]
-name = "hello"
+name = "dragon-coin"
 version = "1.1.1"
 edition = "2021"
 #resolver = "2"
@@ -14,7 +14,7 @@ radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1
 scrypto-unit = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
 scrypto-test = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
 radix-engine-interface = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
-hello = { path = ".", features = ["test"] }
+dragon-coin = { path = ".", features = ["test"] }
 
 [profile.release]
 opt-level = 'z'        # Optimize for size.
