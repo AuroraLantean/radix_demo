@@ -25,7 +25,7 @@ mod dragon_coin {
         ))
         .mint_initial_supply(1);
 
-        let my_bucket: Bucket = ResourceBuilder::new_fungible(OwnerRole::None)
+      let my_bucket: Bucket = ResourceBuilder::new_fungible(OwnerRole::None)
         .divisibility(DIVISIBILITY_MAXIMUM)
         .metadata(metadata! {
             init {
@@ -70,32 +70,28 @@ mod dragon_coin {
         vault: Vault::with_bucket(my_bucket),
       }
       .instantiate()
-      .prepare_to_globalize(OwnerRole::Updatable(rule!(require(admin_badge.resource_address()))))
+      .prepare_to_globalize(OwnerRole::Updatable(rule!(require(
+        admin_badge.resource_address()
+      ))))
       /*.enable_component_royalties(component_royalties!(
-          init {
-              withdraw => Xrd(dec!(1)), locked;
-              withdraw_all => Xrd(dec!(0)), locked;
-              burn => Xrd(dec!(0)), locked;
-              make_new_token => Xrd(dec!(1)), locked;
-            }))*/
+      init {
+          withdraw => Xrd(dec!(1)), locked;
+          withdraw_all => Xrd(dec!(0)), locked;
+          burn => Xrd(dec!(0)), locked;
+          make_new_token => Xrd(dec!(1)), locked;
+        }))*/
       .globalize()
       // .roles(roles!(admin => rule!(require(admin_badge.resource_address()));
       // ))
     }
     //a method refers to itself
     pub fn get_token(&mut self, amount: Decimal) -> Bucket {
-      info!(
-        "Vault balance: {}... now minting",
-        self.vault.amount()
-      );
+      info!("Vault balance: {}... now minting", self.vault.amount());
       assert!(self.vault.amount() >= amount);
       self.vault.take(amount)
     }
     pub fn withdraw(&mut self, amount: Decimal) -> Bucket {
-      info!(
-        "original vault balance: {}...",
-        self.vault.amount()
-      );
+      info!("original vault balance: {}...", self.vault.amount());
       assert!(self.vault.amount() >= amount);
       self.vault.take(amount)
     }
@@ -122,7 +118,7 @@ mod dragon_coin {
         ))
         .mint_initial_supply(supply);
 
-      return tokens;
+      tokens
     }
   }
 }

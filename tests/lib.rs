@@ -35,7 +35,7 @@ fn test() {
 
   // Test the `free_token` method.
   let manifest = ManifestBuilder::new()
-    .call_method(component, "free_token", manifest_args!())
+    .call_method(component, "get_token", manifest_args!())
     .call_method(
       account,
       "deposit_batch",

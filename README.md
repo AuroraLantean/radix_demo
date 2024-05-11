@@ -1,4 +1,9 @@
 # Radix Demo
+Install Rust v1.77.2, then build: 
+```
+rustup default 1.77.2
+cargo build
+```
 
 Format code: `cargo fmt`
 
