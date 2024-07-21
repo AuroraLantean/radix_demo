@@ -1,40 +1,37 @@
-use dragon_coin::test_bindings::*;
-use radix_engine_interface::prelude::*;
-use scrypto::this_package;
+use dragon_coin::dragon_coin_test::*;
 use scrypto_test::prelude::*;
-
-use scrypto_unit::*;
-use transaction::builder::ManifestBuilder;
 
 #[test]
 fn test() {
   // Setup the environment
-  let mut test_runner = TestRunnerBuilder::new().build();
+  let mut ledger = LedgerSimulatorBuilder::new().build();
 
   // Create an account
-  let (public_key, _private_key, account) = test_runner.new_allocated_account();
+  let (public_key, _private_key, account) = ledger.new_allocated_account();
 
   // Publish package
-  let package_address = test_runner.compile_and_publish(this_package!());
+  let package_address = ledger.compile_and_publish(this_package!());
 
   // Test the `instantiate` function.
   let manifest = ManifestBuilder::new()
+    .lock_fee_from_faucet()
     .call_function(
       package_address,
-      "dragog_coin",
+      "dragon_coin",
       "instantiate",
       manifest_args!(),
     )
     .build();
-  let receipt = test_runner.execute_manifest_ignoring_fee(
+  let receipt = ledger.execute_manifest(
     manifest,
     vec![NonFungibleGlobalId::from_public_key(&public_key)],
   );
   println!("{:?}\n", receipt);
   let component = receipt.expect_commit(true).new_component_addresses()[0];
 
-  // Test the `free_token` method.
+  // Test the `get_token` method.
   let manifest = ManifestBuilder::new()
+    .lock_fee_from_faucet()
     .call_method(component, "get_token", manifest_args!())
     .call_method(
       account,
@@ -42,7 +39,7 @@ fn test() {
       manifest_args!(ManifestExpression::EntireWorktop),
     )
     .build();
-  let receipt = test_runner.execute_manifest_ignoring_fee(
+  let receipt = ledger.execute_manifest(
     manifest,
     vec![NonFungibleGlobalId::from_public_key(&public_key)],
   );
@@ -54,7 +51,8 @@ fn test() {
 fn test_with_test_environment() -> Result<(), RuntimeError> {
   // Arrange
   let mut env = TestEnvironment::new();
-  let package_address = Package::compile_and_publish(this_package!(), &mut env)?;
+  let package_address =
+    PackageFactory::compile_and_publish(this_package!(), &mut env, CompileProfile::Fast)?;
 
   let mut dragog_coin = DragonCoin::instantiate(package_address, &mut env)?;
 

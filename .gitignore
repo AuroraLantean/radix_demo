@@ -2,7 +2,8 @@
 # will have compiled files and executables
 debug/
 target/
-archive/
+aarchives
+.idea
 .env
 zz*
 

@@ -1,9 +1,26 @@
 # Radix Demo
-Install Rust v1.77.2, then build: 
+
+Install Rust v1.79.0, then build:
+
 ```
-rustup default 1.77.2
-cargo build
+rustup default 1.79.0
 ```
+
+To update Radix CLI:
+https://github.com/radixdlt/radixdlt-scrypto
+
+```
+rustup update stable
+cargo install radix-clis
+resim reset
+rm Cargo.lock
+cargo clean
+scrypto build
+```
+
+When updating an existing project be sure to delete the existing cargo.lock file run `cargo clean` and scrypto build to recompile with all the latest updates.
+
+https://github.com/radixdlt/radixdlt-scrypto
 
 Format code: `cargo fmt`
 
