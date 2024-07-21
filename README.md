@@ -18,7 +18,7 @@ cargo clean
 scrypto build
 ```
 
-When updating an existing project be sure to delete the existing cargo.lock file run `cargo clean` and scrypto build to recompile with all the latest updates.
+When updating an existing project be sure to delete the existing cargo.lock file run `cargo clean` and `scrypto build` to recompile with all the latest updates.
 
 https://github.com/radixdlt/radixdlt-scrypto
 

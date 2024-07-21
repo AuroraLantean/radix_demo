@@ -1,21 +1,27 @@
 use scrypto::prelude::*;
-
 #[blueprint]
-mod dragon_coin {
+mod token_sale {
   enable_method_auth! {
-      methods {
-          get_token => PUBLIC;
-          withdraw => restrict_to: [OWNER];
-          withdraw_all => restrict_to: [OWNER];
+    roles {
+      admin => updatable_by: [super_admin, OWNER];
+      super_admin => updatable_by: [OWNER];
+  },//TODO: continue here at the Scrypto101 course
+    methods {
+          buy_token => PUBLIC;
           burn => PUBLIC;
+          withdraw => restrict_to: [OWNER];
+          withdraw_xrd => restrict_to: [OWNER];
+          withdraw_all => restrict_to: [OWNER];
           make_new_token => restrict_to: [OWNER];
-      }
+      }//SELF - Denotes the component itself
   }
-  struct DragonCoin {
-    vault: Vault,
+  struct TokenSale {
+    new_token_vault: FungibleVault,
+    xrd_vault: FungibleVault,
+    token_price: Decimal,
   }
-  impl DragonCoin {
-    pub fn instantiate() -> Global<DragonCoin> {
+  impl TokenSale {
+    pub fn instantiate_token_sale(token_price: Decimal) -> Global<TokenSale> {
       let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
         .divisibility(DIVISIBILITY_NONE)
         .metadata(metadata!(
@@ -25,7 +31,7 @@ mod dragon_coin {
         ))
         .mint_initial_supply(1);
 
-      let my_bucket: Bucket = ResourceBuilder::new_fungible(OwnerRole::None)
+      let my_bucket = ResourceBuilder::new_fungible(OwnerRole::None)
         .divisibility(DIVISIBILITY_MAXIMUM)
         .metadata(metadata! {
             init {
@@ -67,7 +73,9 @@ mod dragon_coin {
       )) */
       // Instantiate component, populating its vault with our supply of 1000 tokens
       Self {
-        vault: Vault::with_bucket(my_bucket),
+        new_token_vault: FungibleVault::with_bucket(my_bucket),
+        xrd_vault: FungibleVault::new(XRD),
+        token_price,
       }
       .instantiate()
       .prepare_to_globalize(OwnerRole::Updatable(rule!(require(
@@ -85,24 +93,35 @@ mod dragon_coin {
       // ))
     }
     //a method refers to itself
-    pub fn get_token(&mut self, amount: Decimal) -> Bucket {
-      info!("Vault balance: {}... now minting", self.vault.amount());
-      assert!(self.vault.amount() >= amount);
-      self.vault.take(amount)
+    pub fn buy_token(
+      &mut self,
+      amount: Decimal,
+      mut payment: FungibleBucket,
+    ) -> (FungibleBucket, FungibleBucket) {
+      // take our price in XRD out of the payment if the caller has sent too few, or sent something other than XRD, they'll get a runtime error
+      let xrd_payment_amount = self.token_price.checked_mul(amount).unwrap();
+      let xrd_payment = payment.take(xrd_payment_amount);
+      self.xrd_vault.put(xrd_payment);
+
+      // return a tuple containing a new token, plus whatever change is left on the input payment (if any) if we're out of new tokens to give, we'll see a runtime error when we try to grab one
+      (self.new_token_vault.take(amount), payment)
     }
-    pub fn withdraw(&mut self, amount: Decimal) -> Bucket {
-      info!("original vault balance: {}...", self.vault.amount());
-      assert!(self.vault.amount() >= amount);
-      self.vault.take(amount)
+    pub fn withdraw(&mut self, amount: Decimal) -> FungibleBucket {
+      info!("new_token_vault balance: {}", self.new_token_vault.amount());
+      assert!(self.new_token_vault.amount() >= amount);
+      self.new_token_vault.take(amount)
     }
-    pub fn withdraw_all(&mut self) -> Bucket {
-      self.vault.take_all()
+    pub fn withdraw_all(&mut self) -> FungibleBucket {
+      self.new_token_vault.take_all()
     }
     pub fn burn(&self, bucket: Bucket) {
-      assert!(bucket.resource_address() == self.vault.resource_address());
+      assert!(bucket.resource_address() == self.new_token_vault.resource_address());
       bucket.burn();
     }
-
+    pub fn withdraw_xrd(&mut self, amount: Decimal) -> FungibleBucket {
+      assert!(self.xrd_vault.amount() >= amount);
+      self.xrd_vault.take(amount)
+    }
     pub fn make_new_token(
       &mut self,
       token_name: String,
