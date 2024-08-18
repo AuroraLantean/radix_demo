@@ -1,9 +1,9 @@
 # Radix Demo
 
-Install Rust v1.79.0, then build:
+Install Rust v1.80.1, then build:
 
 ```
-rustup default 1.79.0
+rustup default 1.80.1
 ```
 
 To update Radix CLI:

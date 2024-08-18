@@ -1,4 +1,10 @@
 use scrypto::prelude::*;
+
+#[derive(ScryptoSbor, NonFungibleData)]
+struct ClaimData {
+  #[mutable]
+  claimed: bool,
+}
 #[blueprint]
 mod token_sale {
   const INIT_BADGE: ResourceManager =
@@ -15,7 +21,10 @@ mod token_sale {
   },
     methods {
       get_price => PUBLIC;
-          buy_token => PUBLIC;
+      claim_tokens => PUBLIC;
+      mint_claim_badge => PUBLIC;
+      send_airdrop => PUBLIC;
+      buy_token => PUBLIC;
           burn => PUBLIC;
           update_role => PUBLIC;
           claim_royalty => PUBLIC;//but certain role requirement will still be enforced
@@ -29,6 +38,9 @@ mod token_sale {
     new_token_vault: FungibleVault,
     xrd_vault: FungibleVault,
     token_price: Decimal,
+    minter_badge_vault: FungibleVault,
+    claim_badge_manager: ResourceManager,
+    airdrop_badge_vault: FungibleVault,
   }
   impl TokenSale {
     pub fn instantiate_token_sale(token_price: Decimal) -> Global<TokenSale> {
@@ -58,6 +70,20 @@ mod token_sale {
             }
         ))
         .mint_initial_supply(1);
+
+      let minter_badge = ResourceBuilder::new_fungible(OwnerRole::None).mint_initial_supply(1);
+      let claim_badge = ResourceBuilder::new_ruid_non_fungible::<ClaimData>(OwnerRole::None)
+        .mint_roles(mint_roles!(
+            minter => rule!(require(minter_badge.resource_address()));
+            minter_updater => rule!(deny_all);
+        ))
+        .non_fungible_data_update_roles(non_fungible_data_update_roles!(
+            non_fungible_data_updater => rule!(require(minter_badge.resource_address()));
+            non_fungible_data_updater_updater => rule!(deny_all);
+        ))
+        .create_with_no_initial_supply();
+
+      let airdrop_badge = ResourceBuilder::new_fungible(OwnerRole::None).mint_initial_supply(1);
 
       let abadge_addr = admin_badge.resource_address();
 
@@ -105,6 +131,9 @@ mod token_sale {
         new_token_vault: FungibleVault::with_bucket(my_bucket),
         xrd_vault: FungibleVault::new(XRD),
         token_price,
+        minter_badge_vault: FungibleVault::with_bucket(minter_badge),
+        claim_badge_manager: claim_badge,
+        airdrop_badge_vault: FungibleVault::with_bucket(airdrop_badge),
       }
       .instantiate()
       .prepare_to_globalize(
@@ -141,6 +170,9 @@ mod token_sale {
           init {
               get_price => Usd(1.into()), updatable;
               buy_token => Xrd(1.into()), updatable;
+              claim_tokens => Free, locked;
+              mint_claim_badge => Free, locked;
+              send_airdrop => Free, locked;
               claim_royalty => Free, locked;
               withdraw => Free, locked;
               withdraw_all => Free, locked;
@@ -166,8 +198,59 @@ mod token_sale {
       // return a tuple containing a new token, plus whatever change is left on the input payment (if any) if we're out of new tokens to give, we'll see a runtime error when we try to grab one
       (self.new_token_vault.take(amount), payment)
     }
+
+    #[allow(clippy::let_and_return)]
+    pub fn mint_claim_badge(&mut self) -> NonFungibleBucket {
+      let claim_badge = self
+        .minter_badge_vault
+        .authorize_with_amount(1, || {
+          self
+            .claim_badge_manager
+            .mint_ruid_non_fungible(ClaimData { claimed: false })
+        })
+        .as_non_fungible();
+      claim_badge
+    }
+
+    pub fn claim_tokens(&mut self, claim_badge_proof: NonFungibleProof) -> FungibleBucket {
+      let checked_proof = claim_badge_proof
+        .check_with_message(self.claim_badge_manager.address(), "Incorrect proof!");
+      //.check().expect("Incorrect proof!");
+      let item = checked_proof.non_fungible::<ClaimData>();
+      //let nft_data = item.data();
+
+      // Asserting that the claimed field does not have a value of true.//assert_ne
+      assert!(
+        !item.data().claimed,
+        "{} {}",
+        true,
+        "You have already claimed your tokens"
+      );
+      //update item info like mappings in Solidity
+      self.minter_badge_vault.authorize_with_amount(1, || {
+        self
+          .claim_badge_manager
+          .update_non_fungible_data(item.local_id(), "claimed", true)
+      });
+      self.new_token_vault.take(10)
+    }
+
+    //Send token; Components Generating Proofs: components that wish to regularly send tokens to an account will require the component to become an “authorized depositor”,
+    pub fn send_airdrop(&mut self, mut account: Global<Account>) {
+      self.airdrop_badge_vault.authorize_with_amount(dec!(1), || {
+        let bucket_of_tokens = self.new_token_vault.take(1);
+
+        account.try_deposit_or_abort(
+          bucket_of_tokens.into(),
+          Some(ResourceOrNonFungible::Resource(
+            self.airdrop_badge_vault.resource_address(),
+          )),
+        );
+      });
+    }
+
     pub fn get_price(&mut self) -> Decimal {
-      info!("get_price: {}", self.get_price);
+      info!("get_price");
       self.token_price
     }
     pub fn withdraw(&mut self, amount: Decimal) -> FungibleBucket {
